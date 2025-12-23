@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+             xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL
+                                http://www.omg.org/spec/BPMN/2.0/20100501/BPMN20.xsd"
+             targetNamespace="leave-process">
+
+    <process id="leaveApprovalProcess" name="请假审批流程" isExecutable="true"
+             camunda:historyTimeToLive="P365D">
+
+        <!-- 开始事件 -->
+        <startEvent id="startEvent" name="申请已提交"/>
+        <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="gateway1"/>
+
+        <!-- 排他网关：判断是否需要部门审批 -->
+        <exclusiveGateway id="gateway1" name="判断是否需要部门审批"/>
+
+        <!-- 条件分支1：普通部门员工（需要部门审批） -->
+        <sequenceFlow id="flow2" sourceRef="gateway1" targetRef="deptManagerTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${applicantRole == 2 && departmentId != null}]]>
+            </conditionExpression>
+        </sequenceFlow>
+
+        <!-- 条件分支2：部门负责人或无部门员工（跳过部门审批） -->
+        <sequenceFlow id="flow3" sourceRef="gateway1" targetRef="adminTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${applicantRole != 2 || departmentId == null}]]>
+            </conditionExpression>
+        </sequenceFlow>
+
+        <!-- 部门负责人审批任务 -->
+        <userTask id="deptManagerTask" name="部门负责人审批"
+                  camunda:assignee="${deptManagerId}"
+                  camunda:formKey="deptApprovalForm">
+            <extensionElements>
+                <camunda:taskListener event="create"
+                                      class="com.yyds.hrcsserver.listener.DeptApprovalTaskListener"/>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="flow4" sourceRef="deptManagerTask" targetRef="gateway2"/>
+
+        <!-- 排他网关：部门审批结果判断 -->
+        <exclusiveGateway id="gateway2" name="部门审批结果"/>
+
+        <!-- 部门同意 → 流转到管理员审批 -->
+        <sequenceFlow id="flow5" sourceRef="gateway2" targetRef="adminTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${deptApproved == true}]]>
+            </conditionExpression>
+        </sequenceFlow>
+
+        <!-- 部门驳回 → 直接结束流程 -->
+        <sequenceFlow id="flow6" sourceRef="gateway2" targetRef="endEvent">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${deptApproved == false}]]>
+            </conditionExpression>
+        </sequenceFlow>
+
+        <!-- 管理员审批任务 -->
+        <userTask id="adminTask" name="管理员审批"
+                  camunda:assignee="${adminId}"
+                  camunda:formKey="adminApprovalForm">
+            <extensionElements>
+                <camunda:taskListener event="create"
+                                      class="com.yyds.hrcsserver.listener.AdminApprovalTaskListener"/>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="flow7" sourceRef="adminTask" targetRef="gateway3"/>
+
+        <!-- 排他网关：最终审批结果判断 -->
+        <exclusiveGateway id="gateway3" name="最终审批结果"/>
+
+        <!-- 管理员同意 → 流程通过 -->
+        <sequenceFlow id="flow8" sourceRef="gateway3" targetRef="endEvent">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${adminApproved == true}]]>
+            </conditionExpression>
+        </sequenceFlow>
+
+        <!-- 管理员驳回 → 流程驳回 -->
+        <sequenceFlow id="flow9" sourceRef="gateway3" targetRef="endEvent">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${adminApproved == false}]]>
+            </conditionExpression>
+        </sequenceFlow>
+
+        <!-- 结束事件 -->
+        <endEvent id="endEvent" name="流程结束">
+            <extensionElements>
+                <camunda:executionListener event="end"
+                                           class="com.yyds.hrcsserver.listener.ApplyEndListener"/>
+            </extensionElements>
+        </endEvent>
+
+    </process>
+</definitions>

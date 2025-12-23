@@ -1,9 +1,8 @@
 package com.yyds.hrcspojo.entity;
 
-import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.yyds.hrcspojo.base.BaseEntity;
-import lombok.Builder;
 import lombok.Data;
 
 import java.util.Date;
@@ -13,9 +12,9 @@ import java.util.Date;
  * @TableName user
  */
 @Data
-@Builder
 @TableName(value ="user")
-public class User  extends BaseEntity {
+public class User {
+    private Long id;
 
     /**
      * 用户名
@@ -80,5 +79,18 @@ public class User  extends BaseEntity {
      * 住址
      */
     private String address;
+    @TableField(fill = FieldFill.INSERT)
+    private String createBy;  // 创建人ID
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;  // 修改人ID
+
+    @TableField(fill = FieldFill.INSERT)
+    private Date createTime;  // 创建时间
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Date updateTime;  // 更新时间
+
+    private Long departmentId;
 
 }

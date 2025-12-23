@@ -1,0 +1,116 @@
+
+security:
+  argon2:
+    type: ARGON2d      # ARGON2i, ARGON2d 或 ARGON2id
+    iterations: 2        # 迭代次数
+    memory: 65536        # 内存使用量(KB)
+    parallelism: 4       # 并行度
+
+
+
+# XXL-JOB 配置
+xxl:
+  job:
+    admin:
+      addresses: http://localhost:8080/xxl-job-admin  # 调度中心地址
+    executor:
+      appname: hrcs-salary-executor
+      port: 9999
+      logpath: /data/logs/xxl-job/hrcs-salary
+      logretentiondays: 30
+    accessToken: default_token
+
+# 定时任务开关（可选）
+salary:
+  auto-issue:
+    enabled: true
+    default-issuer-id: 1  # 系统默认发放人
+
+aliyun:
+  oss:
+    max-file-size: 10485760  # 例如：10MB = 10 * 1024 * 1024 bytes
+    bucket-name: lh20-java
+    access-key-id: LTAI5tMLyAxCDc4kcnZPVpzT
+    access-key-secret: j1ikdgi5jsPqXmefqldVvB1BygIqjT
+    endpoint: oss-cn-beijing.aliyuncs.com
+
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB      # 单个文件最大大小（默认 1MB）
+      max-request-size: 100MB  # 整个请求的最大大小（默认 10MB）
+  security:
+    user:
+      name: user
+      password: user
+  application:
+    name: Hrcs-Starter
+  mail:
+    username: yu_hl0v1@163.com
+    password: SSmPTZFXtYRMTMMe
+    host: smtp.163.com
+  datasource:
+    url: jdbc:mysql://localhost:3306/customer_service?useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: 1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      database: 0
+      host: localhost
+      port: 6379
+      lettuce:
+       pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: -1ms
+
+
+
+#springdoc:
+#  api-docs:
+#    path: /v3/api-docs
+#  group-configs:
+#    - group: '默认接口'
+#      packages-to-scan: com.yyds.hrcsserver
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+mybatis-plus:
+  global-config:
+    db-config:
+      update-strategy: not_null  # 允许更新null值
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.yyds.hrcspojo.entity
+
+
+server:
+  port: 8024
+
+
+#langchain4j配置
+langchain4j:
+  community:
+    dashscope:
+      chat-model:
+        model-name: qwen3-max
+        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
+      streaming-chat-model:
+        model-name: qwen3-max
+        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
+      embedding-model:
+        model-name: text-embedding-v4
+        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
+
+
+
+bigmodel:
+  api-key: 6287908b8d4640979f8b504ae8991f4e.JdRO38eQ89g89UUD
+

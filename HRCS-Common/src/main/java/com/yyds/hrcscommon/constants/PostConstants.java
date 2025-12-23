@@ -10,7 +10,8 @@ public class PostConstants {
     public static final BigDecimal DEFAULT_PRICE = new BigDecimal("5000.00");
     public static final BigDecimal MIDDLE_PRICE = new BigDecimal("7000.00");
     public static final BigDecimal HIGH_PRICE = new BigDecimal("10000.00");
-    public static final int user = 0;
+    public static final int user = 2;
     public static final int admin = 1;
+    public static final int department_admin = 3;
 }
 

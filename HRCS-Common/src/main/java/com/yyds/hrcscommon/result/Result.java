@@ -47,6 +47,14 @@ public class Result<T> implements Serializable {
                 .build();
     }
 
+    public static <T>Result<T> getSuccess(String msg,T data){
+        return Result.<T>builder()
+                .code(StateEnum.SUCCESS.getCode())
+                .msg(msg)
+                .data(data)
+                .build();
+    }
+
     public static <T> Result<T> getErrorResult(T data){
         return Result.<T>builder()
                 .code(StateEnum.ERROR.getCode())
@@ -77,5 +85,6 @@ public class Result<T> implements Serializable {
     public static <T> Result<T> getFailureResult(){
         return getFailureResult(null);
     }
+
 
 }

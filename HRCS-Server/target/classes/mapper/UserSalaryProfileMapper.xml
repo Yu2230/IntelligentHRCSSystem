@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yyds.hrcsserver.mapper.UserSalaryProfileMapper">
+
+    <resultMap id="BaseResultMap" type="com.yyds.hrcspojo.entity.UserSalaryProfile">
+            <id property="id" column="id" />
+            <result property="userId" column="user_id" />
+            <result property="baseSalary" column="base_salary" />
+            <result property="socialSecurityBase" column="social_security_base" />
+            <result property="housingFundBase" column="housing_fund_base" />
+            <result property="effectiveDate" column="effective_date" />
+            <result property="createBy" column="create_by" />
+            <result property="updateBy" column="update_by" />
+            <result property="createTime" column="create_time" />
+            <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,user_id,base_salary,social_security_base,housing_fund_base,effective_date,
+        create_by,update_by,create_time,update_time
+    </sql>
+</mapper>

@@ -15,6 +15,7 @@ public class RegisterDTO {
     private String code;
     @Size(max = 12,min = 8, message = "password is incorrect")
     private String password;
+
     @NotNull
     private String userName;
     @NotNull

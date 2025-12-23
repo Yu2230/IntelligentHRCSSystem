@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yyds.hrcsserver.mapper.SalaryMapper">
+
+    <select id="selectMonthlyStats" resultType="com.yyds.hrcspojo.data.user.salary.MonthlyStatVO">
+        SELECT
+            month,
+            COUNT(*) AS totalCount,
+            SUM(actual_salary) AS totalAmount,
+            AVG(actual_salary) AS avgAmount
+        FROM salary
+        WHERE month LIKE CONCAT(#{year}, '%')
+          AND status = 1
+        GROUP BY month
+        ORDER BY month DESC
+    </select>
+</mapper>

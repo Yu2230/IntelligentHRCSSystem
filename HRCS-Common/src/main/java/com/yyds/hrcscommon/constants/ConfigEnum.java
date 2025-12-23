@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 public enum ConfigEnum {
     DEFAULT_AVATAR("imgurl","http://118.25.77.201:9000/infinitec-chat/"),
-    TOKEN_SECRET_KEY("tokenSecretKey","smoggy"),
+    TOKEN_SECRET_KEY("tokenSecretKey","550e8400-e29b-41d4-a716-446655440000-smoggy"),
     PASSWORD_SALT("passwordSalt","smoggy");
     private final String text;
 

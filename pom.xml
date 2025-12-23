@@ -16,7 +16,6 @@
         <module>HRCS-Common</module>
         <module>HRCS-Pojo</module>
         <module>HRCS-Server</module>
-        <module>HRCS-Starter</module>
     </modules>
     <!-- 全局版本-->
     <properties>
@@ -24,24 +23,41 @@
         <spring-boot.version>3.5.0</spring-boot.version>
         <lombok.version>1.18.38</lombok.version>
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
+        <jsqlparser.version>4.6</jsqlparser.version>
         <mysql.version>8.0.31</mysql.version>
-        <hutool.version>5.8.38</hutool.version>
         <jjwt.version>0.12.5</jjwt.version>
         <redis.version>3.5.0</redis.version>
         <pagehelper.version>5.1.2</pagehelper.version>
         <knife4j.version>4.3.0</knife4j.version>
-        <commons-io.version>2.15.1</commons-io.version>
         <common-lang3.version>3.17.0</common-lang3.version>
         <fastjson2.version>2.0.53</fastjson2.version>
         <servlet.version>6.1.0</servlet.version>
         <mail.version>2.0.10</mail.version>
         <argon2-jvm.version>2.11</argon2-jvm.version>
+        <aliyun.sdk.oss>3.10.2</aliyun.sdk.oss>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 强制所有依赖使用此版本 -->
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.16.1</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
             <version>${spring-boot.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>${jsqlparser.version}</version>
         </dependency>
 
         <dependency>
@@ -61,16 +77,19 @@
             <artifactId>mybatis-plus-boot-starter</artifactId>
             <version>${mybatis-plus.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>${aliyun.sdk.oss}</version>
+        </dependency>
+
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>${mysql.version}</version>
         </dependency>
-        <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
-            <version>${hutool.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt</artifactId>
@@ -85,16 +104,28 @@
             <groupId>com.github.pagehelper</groupId>
             <artifactId>pagehelper</artifactId>
             <version>${pagehelper.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-io</groupId>
+                    <artifactId>commons-io</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
             <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
             <version>4.3.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.3.0</version>
+        </dependency>
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>${commons-io.version}</version>
+            <version>2.16.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -139,5 +170,115 @@
             <version>4.0.1</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-models</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.17.0</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>4.7</version>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid-spring-boot-starter</artifactId>
+            <version>1.2.8</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-io</groupId>
+                    <artifactId>commons-io</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+
+
+
+
+
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.8.18</version>
+        </dependency>
+        <!-- 使用 Activiti 8+ 支持 Spring Boot 3 -->
+        <!-- 使用已验证兼容 Spring Boot 3 的 Activiti 版本 -->
+<!--        <dependency>-->
+<!--            <groupId>org.activiti</groupId>-->
+<!--            <artifactId>activiti-spring-boot-starter</artifactId>-->
+<!--            <version>7.1.0.M6</version>-->
+<!--        </dependency>-->
+        <!-- 添加 Camunda Spring Boot Starter -->
+        <dependency>
+            <groupId>org.camunda.bpm.springboot</groupId>
+            <artifactId>camunda-bpm-spring-boot-starter</artifactId>
+            <version>7.20.0</version>
+        </dependency>
+
+        <!-- Camunda 支持 Jakarta EE 9+ -->
+        <dependency>
+            <groupId>org.camunda.bpm.springboot</groupId>
+            <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
+            <version>7.20.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.xuxueli</groupId>
+            <artifactId>xxl-job-core</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-community-dashscope-spring-boot-starter</artifactId>
+            <version>1.1.0-beta7</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-spring-boot-starter</artifactId>
+            <version>1.1.0-beta7</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/dev.langchain4j/langchain4j-mcp -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-mcp</artifactId>
+            <version>1.0.0-beta3</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-reactor</artifactId>
+            <version>1.1.0-beta7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.16.1</version>
+        </dependency>
+
+
     </dependencies>
 </project>
+
+
+
+
+

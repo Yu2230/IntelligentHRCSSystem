@@ -10,9 +10,11 @@
         <module name="HRCS-Common" />
         <module name="HRCS-Pojo" />
         <module name="HRCS-Server" />
-        <module name="HRCS-Starter" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="HRCS-Starter" target="17" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
