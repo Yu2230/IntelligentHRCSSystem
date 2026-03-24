@@ -1,9 +1,6 @@
 package com.yyds.hrcsserver.repository;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.yyds.hrcspojo.data.user.department.DepartmentVO;
 import com.yyds.hrcspojo.entity.Department;
 
 import java.util.List;

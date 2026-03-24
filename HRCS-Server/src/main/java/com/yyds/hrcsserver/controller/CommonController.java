@@ -4,7 +4,7 @@ import com.yyds.hrcscommon.result.Result;
 import com.yyds.hrcscommon.utils.AliOssUtil;
 import com.yyds.hrcspojo.data.user.CountINFO;
 import com.yyds.hrcspojo.data.user.DailyStatsUserDTO;
-import com.yyds.hrcspojo.data.user.notice.DaliyStateCountNoticeDTO;
+import com.yyds.hrcspojo.notice.DaliyStateCountNoticeDTO;
 import com.yyds.hrcsserver.service.NoticeService;
 import com.yyds.hrcsserver.service.UserService;
 import io.swagger.annotations.Api;

@@ -1,6 +1,6 @@
 package com.yyds.hrcsserver.mapper;
 
-import com.yyds.hrcspojo.data.user.salary.MonthlyStatVO;
+import com.yyds.hrcspojo.salary.MonthlyStatVO;
 import com.yyds.hrcspojo.entity.Salary;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
@@ -15,6 +15,7 @@ import java.util.List;
 public interface SalaryMapper extends BaseMapper<Salary> {
 
     List<MonthlyStatVO> selectMonthlyStats(String year);
+
 }
 
 

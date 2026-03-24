@@ -20,6 +20,10 @@ public class User {
      * 用户名
      */
     private String userName;
+    /**
+     * 工号
+     */
+    private String workNo;
 
     /**
      * 姓名
@@ -92,5 +96,10 @@ public class User {
     private Date updateTime;  // 更新时间
 
     private Long departmentId;
+
+    /**
+     * 岗位ID（一人一岗）
+     */
+    private Long jobPositionId;
 
 }

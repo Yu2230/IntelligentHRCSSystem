@@ -34,7 +34,9 @@ aliyun:
     access-key-secret: j1ikdgi5jsPqXmefqldVvB1BygIqjT
     endpoint: oss-cn-beijing.aliyuncs.com
 
-
+web:
+  resources:
+    add-mappings: false  # 禁用静态资源映射
 spring:
   servlet:
     multipart:
@@ -50,6 +52,9 @@ spring:
     username: yu_hl0v1@163.com
     password: SSmPTZFXtYRMTMMe
     host: smtp.163.com
+  web:
+    resources:
+      add-mappings: false  # 禁用静态资源映射
   datasource:
     url: jdbc:mysql://localhost:3306/customer_service?useSSL=false&serverTimezone=Asia/Shanghai
     username: root
@@ -60,6 +65,7 @@ spring:
       database: 0
       host: localhost
       port: 6379
+#      password: workSpace123
       lettuce:
        pool:
         max-active: 8
@@ -92,24 +98,47 @@ mybatis-plus:
 
 
 server:
+  tomcat:
+    connection-timeout: 300000  # 5分钟
+    async-timeout: 300000       # 5分钟
+
   port: 8024
 
 
 #langchain4j配置
+#langchain4j:
+#  community:
+#    dashscope:
+#      chat-model:
+#        model-name: qwen3-max
+#        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
+#        base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+#      streaming-chat-model:
+#        model-name: qwen3-max
+#        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
+#        base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+#      embedding-model:
+#        model-name: text-em bedding-v4
+#        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
+#        base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+
 langchain4j:
   community:
     dashscope:
+      api-key: "sk-69b046dd98b4458681f28ef4ebd99f79"
       chat-model:
         model-name: qwen3-max
-        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
+        api-key: "sk-69b046dd98b4458681f28ef4ebd99f79"
       streaming-chat-model:
         model-name: qwen3-max
-        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
+        api-key: "sk-69b046dd98b4458681f28ef4ebd99f79"
       embedding-model:
-        model-name: text-embedding-v4
-        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
-
-
+        model-name: text-embedding-v2
+        api-key: "sk-69b046dd98b4458681f28ef4ebd99f79"
+  rag:
+    enabled: true  # ✅ 强制启用
+    max-results: 5 # ✅ 检索结果数量
+    min-score: 0.6 # ✅ 最低相似度
 
 bigmodel:
   api-key: 6287908b8d4640979f8b504ae8991f4e.JdRO38eQ89g89UUD

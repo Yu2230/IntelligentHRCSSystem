@@ -1,9 +1,9 @@
 package com.yyds.hrcsserver.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.yyds.hrcspojo.data.user.department.DepartmentVO;
-import com.yyds.hrcspojo.data.user.department.DepartmentWithUsersDTOS;
-import com.yyds.hrcspojo.data.user.department.DepartmentWithUsersVO;
+import com.yyds.hrcspojo.department.DepartmentVO;
+import com.yyds.hrcspojo.department.DepartmentWithUsersDTOS;
+import com.yyds.hrcspojo.department.DepartmentWithUsersVO;
 import com.yyds.hrcspojo.entity.Department;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -30,6 +30,8 @@ public interface DepartmentService extends IService<Department> {
     boolean addUser(DepartmentWithUsersDTOS departmentWithUsersDTOS);
 
     Integer countUsers(Long id);
+
+    List<DepartmentVO> queryAll();
 
     boolean removeUsersFromDepartment(Long deptId, List<Long> userIds);
 

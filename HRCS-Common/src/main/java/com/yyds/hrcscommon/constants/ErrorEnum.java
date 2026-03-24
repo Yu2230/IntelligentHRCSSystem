@@ -52,7 +52,8 @@ public enum ErrorEnum {
     DEPT_HAS_NON_MANAGER_USERS(50035, "部门下存在非管理员用户，无法删除"),
     GET_LOCK_ERROR(50012, "请稍后再试"),
     CAN_NOT_DELETE_NOTICE_USING(50037, "公告正在使用中，无法删除"),
-    NOTICE_NOT_FOUND(50036, "公告不存在");
+    NOTICE_NOT_FOUND(50036, "公告不存在"),
+    UNAUTHORIZED(50037,"未许可" );
     /**
      * 状态码
      */

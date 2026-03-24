@@ -19,12 +19,12 @@ public class MailClient {
     private JavaMailSender mailSender;  // 建议用 JavaMailSender（功能更全）
 
     @Value("${spring.mail.username}")
-    private String from;  // ✅ 修正拼写
+    private String from;  //修正拼写
 
     private static final String SUBJECT = "你的一次性代码";
 
     public void sendMail(String to, String code) {
-        // ✅ 清除首尾引号和空格
+        //清除首尾引号和空格
         to = to.replaceAll("^[\"']|[\"']$", "").trim();
 
         log.info("准备发送邮件: from={}, to={}, code={}", from, to, code);
@@ -49,6 +49,34 @@ public class MailClient {
         } catch (MailSendException e) {
             log.error("邮件发送失败 to={}, error={}", to, e.getMessage());
             // 3. 捕获特定异常
+            if (e.getMessage().contains("Invalid Addresses")) {
+                throw new RuntimeException("邮箱地址不存在: " + to, e);
+            }
+            throw new RuntimeException("邮件发送失败，请稍后重试", e);
+        }
+    }
+
+    /**
+     * 发送自定义邮件（用于工资通知等）
+     */
+    public void sendCustomMail(String to, String subject, String content) {
+        to = to.replaceAll("^[\\\"']|[\\\"']$", "").trim();
+        if (!isValidEmail(to)) {
+            throw new IllegalArgumentException("邮箱格式无效: " + to);
+        }
+        String realSubject = (subject == null || subject.trim().isEmpty()) ? "通知" : subject;
+        String realContent = content == null ? "" : content;
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(from);
+            message.setTo(to);
+            message.setSubject(realSubject);
+            message.setText(realContent);
+            mailSender.send(message);
+            log.info("邮件发送成功 to={}, subject={}", to, realSubject);
+        } catch (MailSendException e) {
+            log.error("邮件发送失败 to={}, error={}", to, e.getMessage());
             if (e.getMessage().contains("Invalid Addresses")) {
                 throw new RuntimeException("邮箱地址不存在: " + to, e);
             }

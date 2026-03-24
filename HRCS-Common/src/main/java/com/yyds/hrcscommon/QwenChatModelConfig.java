@@ -13,8 +13,6 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 @Configuration
-@ConfigurationProperties(prefix = "langchain4j.community.dashscope.chat-model")
-@Data
 public class QwenChatModelConfig {
 
     @Value("${langchain4j.community.dashscope.chat-model.model-name}")
@@ -23,11 +21,8 @@ public class QwenChatModelConfig {
     @Value("${langchain4j.community.dashscope.chat-model.api-key}")
     private String apiKey;
 
-    @Resource
-    private ChatModelListener chatModelListener;
-
     @Bean
-    public ChatModel myQwenChatModel() {
+    public ChatModel chatModel(ChatModelListener chatModelListener) {
         return QwenChatModel.builder()
                 .apiKey(apiKey)
                 .modelName(modelName)

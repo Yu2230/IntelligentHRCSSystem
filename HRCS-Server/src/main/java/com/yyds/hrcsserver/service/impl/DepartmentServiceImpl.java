@@ -6,9 +6,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yyds.hrcscommon.constants.ErrorEnum;
 import com.yyds.hrcscommon.constants.PostConstants;
 import com.yyds.hrcscommon.exception.BusinessException;
-import com.yyds.hrcspojo.data.user.department.DepartmentVO;
-import com.yyds.hrcspojo.data.user.department.DepartmentWithUsersDTOS;
-import com.yyds.hrcspojo.data.user.department.DepartmentWithUsersVO;
+import com.yyds.hrcspojo.department.DepartmentVO;
+import com.yyds.hrcspojo.department.DepartmentWithUsersDTOS;
+import com.yyds.hrcspojo.department.DepartmentWithUsersVO;
 import com.yyds.hrcspojo.entity.Department;
 
 
@@ -70,7 +70,7 @@ public class DepartmentServiceImpl extends ServiceImpl<DepartmentMapper, Departm
             throw new BusinessException(ErrorEnum.USER_NOT_FOUND);
         }
 
-        // 4. ✅ 检查用户是否已经是其他部门的负责人
+        // 4.  检查用户是否已经是其他部门的负责人
         Department managedDept = departmentRepository.selectByManagerId(department.getManagerId());
         if (managedDept != null && !managedDept.getId().equals(department.getId())) {
             log.warn("【更新部门】失败，用户ID: {} 已是部门 {} 的负责人", department.getManagerId(), managedDept.getId());
@@ -165,6 +165,19 @@ public class DepartmentServiceImpl extends ServiceImpl<DepartmentMapper, Departm
         log.info("【部门分页查询】完成，总记录数: {}", departmentPage.getTotal());
         return departmentPage;
     }
+
+    @Override
+    public List<DepartmentVO> queryAll() {
+        return departmentRepository.list().stream().map(item -> {
+            DepartmentVO vo = new DepartmentVO();
+            vo.setId(item.getId());
+            vo.setDepartmentName(item.getDepartmentName());
+            vo.setStatus(item.getStatus());
+            vo.setManagerId(item.getManagerId());
+            return vo;
+        }).collect(Collectors.toList());
+    }
+
     // 简化版本：当只剩管理员时直接删除部门（包含管理员）
     @Override
     @Transactional(rollbackFor = Exception.class)

@@ -15,9 +15,11 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Repository
@@ -167,6 +169,24 @@ public class UserRepositoryImpl extends ServiceImpl<UserMapper, User> implements
     }
 
     @Override
+    public Map<Long, Long> countByJobPositionIds(List<Long> jobPositionIds) {
+        if (jobPositionIds == null || jobPositionIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Map<String, Object>> rows = getBaseMapper().selectMaps(
+                Wrappers.<User>query()
+                        .in("job_position_id", jobPositionIds)
+                        .select("job_position_id AS jobPositionId", "COUNT(*) AS cnt")
+                        .groupBy("job_position_id")
+        );
+        return rows.stream().collect(Collectors.toMap(
+                row -> ((Number) row.get("jobPositionId")).longValue(),
+                row -> ((Number) row.get("cnt")).longValue(),
+                (a, b) -> a
+        ));
+    }
+
+    @Override
     public List<User> selectList(LambdaQueryWrapper<User> eq) {
         return baseMapper.selectList(eq);
     }
@@ -217,6 +237,30 @@ public class UserRepositoryImpl extends ServiceImpl<UserMapper, User> implements
                 .oneOpt()
                 .map(User::getId)
                 .orElse(null);
+    }
+
+    @Override
+    public List<User> searchEmployees(String keyword, Integer limit) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return List.of();
+        }
+        String kw = keyword.trim();
+        int size = (limit == null || limit <= 0) ? 20 : limit;
+
+        return lambdaQuery()
+                .and(wrapper -> wrapper
+                        .like(User::getName, kw)
+                        .or()
+                        .like(User::getUserName, kw)
+                        .or()
+                        .like(User::getEmail, kw)
+                        .or()
+                        .like(User::getPhone, kw)
+                        .or()
+                        .like(User::getWorkNo, kw)
+                )
+                .last("LIMIT " + size)
+                .list();
     }
 
 

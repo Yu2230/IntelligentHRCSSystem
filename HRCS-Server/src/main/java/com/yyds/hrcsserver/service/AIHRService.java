@@ -7,7 +7,6 @@ import dev.langchain4j.service.Result;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.guardrail.InputGuardrails;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
@@ -29,6 +28,6 @@ public interface AIHRService {
     @SystemMessage(fromResource = "system-prompt.txt")
     Result<String> chatWithRag(String userMessage);
 
-    // 流式对话
-    Flux<String> chatStream(@MemoryId int memoryId, @UserMessage String userMessage);
+    @SystemMessage(fromResource = "system-prompt.txt")
+    Flux<String> chatStream(@MemoryId String memoryId, @UserMessage String userMessage);
 }

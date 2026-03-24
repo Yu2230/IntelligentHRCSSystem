@@ -5,9 +5,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yyds.hrcscommon.result.PageResult;
 import com.yyds.hrcscommon.result.Result;
-import com.yyds.hrcspojo.data.user.apply.ApplyDTO;
-import com.yyds.hrcspojo.data.user.apply.ApplyPageQueryDTO;
-import com.yyds.hrcspojo.data.user.apply.ApplyVO;
+import com.yyds.hrcspojo.apply.ApplyDTO;
+import com.yyds.hrcspojo.apply.ApplyPageQueryDTO;
+import com.yyds.hrcspojo.apply.ApplyVO;
 import com.yyds.hrcspojo.entity.Apply;
 import com.yyds.hrcspojo.entity.Department;
 import com.yyds.hrcspojo.entity.User;
@@ -19,8 +19,11 @@ import com.yyds.hrcsserver.service.LeaveWorkflowService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.camunda.bpm.engine.HistoryService;
 import org.camunda.bpm.engine.RuntimeService;
 import org.camunda.bpm.engine.TaskService;
+import org.camunda.bpm.engine.history.HistoricVariableInstance;
+import org.camunda.bpm.engine.impl.HistoryServiceImpl;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.task.Task;
 import org.springframework.beans.BeanUtils;
@@ -42,6 +45,7 @@ public class LeaveWorkflowServiceImpl implements LeaveWorkflowService {
     private final DepartmentRepository deptRepository;
     private final RuntimeService runtimeService;
     private final TaskService taskService;
+    private final HistoryService historyService;
 
     // ==================== 提交与审批 ====================
 
@@ -63,11 +67,14 @@ public class LeaveWorkflowServiceImpl implements LeaveWorkflowService {
         Map<String, Object> variables = new HashMap<>();
         variables.put("applicantId", dto.getApplicantId().toString());
         variables.put("applicantRole", applicant.getRole());
-        variables.put("departmentId", applicant.getDepartmentId().toString());
+        Long deptId = applicant.getDepartmentId();
+        if (deptId != null) {
+            variables.put("departmentId", deptId.toString());
+        }
         variables.put("adminId", getAdminId().toString());
 
-        if (applicant.getRole() == 2 && applicant.getDepartmentId() != null) {
-            Long deptManagerId = getDeptManagerId(applicant.getDepartmentId());
+        if (applicant.getRole() == 2 && deptId != null) {
+            Long deptManagerId = getDeptManagerId(deptId);
             variables.put("deptManagerId", deptManagerId.toString());
         }
 
@@ -79,6 +86,14 @@ public class LeaveWorkflowServiceImpl implements LeaveWorkflowService {
 
         apply.setProcessInstanceId(instance.getId());
         apply.setDepartmentId(applicant.getDepartmentId());
+        // 冗余记录当前审批人，便于展示（即便流程未正确分配assignee）
+        Long initialApproverId;
+        if (applicant.getRole() == 2 && applicant.getDepartmentId() != null) {
+            initialApproverId = getDeptManagerId(applicant.getDepartmentId());
+        } else {
+            initialApproverId = getAdminId();
+        }
+        apply.setCurrentApproverId(initialApproverId);
         applyRepository.updateById(apply);
 
         return Result.getSuccessResult("申请已提交");
@@ -87,21 +102,97 @@ public class LeaveWorkflowServiceImpl implements LeaveWorkflowService {
     @Override
     public Result approve(Long applyId, Long approverId, Integer action, String comment) {
         Apply apply = applyRepository.getById(applyId);
-        if (apply == null || StringUtils.isEmpty(apply.getProcessInstanceId())) {
+        if (apply == null) {
             return Result.getErrorResultByMsg("申请不存在");
+        }
+        if (!StringUtils.hasText(apply.getProcessInstanceId())) {
+            return Result.getErrorResultByMsg("流程数据缺失，请联系管理员或重新提交申请");
         }
 
         Task task = taskService.createTaskQuery()
                 .processInstanceId(apply.getProcessInstanceId())
                 .singleResult();
 
-        if (task == null || !task.getAssignee().equals(approverId.toString())) {
-            return Result.getErrorResultByMsg("无权操作或任务已处理");
+        if (task == null) {
+            return Result.getErrorResultByMsg("任务已处理或流程已结束");
         }
 
-        Map<String, Object> variables = new HashMap<>();
-        User approver = userRepository.getById(approverId);
+        String assignee = task.getAssignee();
+        if (!StringUtils.hasText(assignee)) {
+            return Result.getErrorResultByMsg("当前任务未分配审批人，请联系管理员");
+        }
+        if (!assignee.equals(approverId.toString())) {
+            return Result.getErrorResultByMsg("无权操作");
+        }
 
+        User approver = userRepository.getById(approverId);
+        if (approver == null) {
+            return Result.getErrorResultByMsg("审批人不存在");
+        }
+        String taskDefinitionKey = task.getTaskDefinitionKey();
+
+        // ===== 审批顺序控制（不依赖historyService）=====
+        if ("deptManagerTask".equals(taskDefinitionKey)) {
+            if (!Integer.valueOf(3).equals(approver.getRole())) {
+                return Result.getErrorResultByMsg("当前需要部门负责人审批");
+            }
+        } else if ("adminTask".equals(taskDefinitionKey)) {
+            if (!Integer.valueOf(1).equals(approver.getRole())) {
+                return Result.getErrorResultByMsg("当前需要管理员审批");
+            }
+
+            // 使用运行时服务验证部门审批是否通过
+            // 获取流程实例ID
+            String processInstanceId = apply.getProcessInstanceId();
+
+            // 查询deptApproved变量（如果变量不存在或false，说明部门未审批）
+            Object deptApprovedObj = runtimeService.getVariable(processInstanceId, "deptApproved");
+            if (deptApprovedObj == null || !(Boolean) deptApprovedObj) {
+                return Result.getErrorResultByMsg("部门负责人尚未审批通过");
+            }
+        } else {
+            return Result.getErrorResultByMsg("未知的审批节点: " + taskDefinitionKey);
+        }
+        // ============================================
+
+//        Map<String, Object> variables = new HashMap<>();
+//        if (approver.getRole() == 3) {
+//            variables.put("deptApproved", action == 1);
+//        } else if (approver.getRole() == 1) {
+//            variables.put("adminApproved", action == 1);
+//        }
+//
+//        taskService.complete(task.getId(), variables);
+//
+//        // 更新业务状态
+//        ProcessInstance pi = runtimeService.createProcessInstanceQuery()
+//                .processInstanceId(apply.getProcessInstanceId())
+//                .singleResult();
+//
+//        if (pi == null) {
+//            // 流程结束，查询最终审批结果
+//            // 使用runtimeService获取最终变量
+//            Object adminApprovedObj = runtimeService.getVariable(
+//                    apply.getProcessInstanceId(), "adminApproved");
+//            boolean finalApproved = adminApprovedObj != null && (Boolean) adminApprovedObj;
+//
+//            apply.setState(finalApproved ? 1 : 2);
+//            apply.setCurrentApproverId(null);
+//            apply.setUpdateTime(new Date());
+//            applyRepository.updateById(apply);
+//        } else {
+//            // 流程未结束，更新当前审批人（冗余字段）
+//            Task nextTask = taskService.createTaskQuery()
+//                    .processInstanceId(apply.getProcessInstanceId())
+//                    .singleResult();
+//            Long nextApproverId = resolveApproverIdFromTask(apply, nextTask);
+//            if (nextApproverId != null) {
+//                apply.setCurrentApproverId(nextApproverId);
+//                apply.setUpdateTime(new Date());
+//                applyRepository.updateById(apply);
+//            }
+//        }
+        Map<String, Object> variables = new HashMap<>();
         if (approver.getRole() == 3) {
             variables.put("deptApproved", action == 1);
         } else if (approver.getRole() == 1) {
@@ -116,11 +207,37 @@ public class LeaveWorkflowServiceImpl implements LeaveWorkflowService {
                 .singleResult();
 
         if (pi == null) {
-            apply.setState(action == 1 ? 1 : 2);
+            // ========== 流程结束，使用 historyService 查询历史变量 ==========
+
+            // 方案1：查询历史变量（推荐）
+            HistoricVariableInstance historicVar = historyService
+                    .createHistoricVariableInstanceQuery()
+                    .processInstanceId(apply.getProcessInstanceId())
+                    .variableName("adminApproved")
+                    .singleResult();
+
+            boolean finalApproved = historicVar != null &&
+                    Boolean.TRUE.equals(historicVar.getValue());
+
+            // 或者方案2：直接根据 action 判断（更简洁）
+            // boolean finalApproved = (action == 1);
+
+            apply.setState(finalApproved ? 1 : 2);
+            apply.setCurrentApproverId(null);
             apply.setUpdateTime(new Date());
             applyRepository.updateById(apply);
+        } else {
+            // 流程未结束，更新当前审批人（冗余字段）
+            Task nextTask = taskService.createTaskQuery()
+                    .processInstanceId(apply.getProcessInstanceId())
+                    .singleResult();
+            Long nextApproverId = resolveApproverIdFromTask(apply, nextTask);
+            if (nextApproverId != null) {
+                apply.setCurrentApproverId(nextApproverId);
+                apply.setUpdateTime(new Date());
+                applyRepository.updateById(apply);
+            }
         }
-
         return Result.getSuccessResult(action == 1 ? "审批通过" : "已驳回");
     }
 
@@ -234,15 +351,29 @@ public class LeaveWorkflowServiceImpl implements LeaveWorkflowService {
         vo.setStateText(getStateText(apply.getState()));
 
         // 补充当前审批人信息
-        if (apply.getState() == 0 && StringUtils.hasText(apply.getProcessInstanceId())) {
-            Task task = taskService.createTaskQuery()
-                    .processInstanceId(apply.getProcessInstanceId())
-                    .singleResult();
-            if (task != null) {
-                vo.setCurrentApproverId(Long.valueOf(task.getAssignee()));
-                User approver = userRepository.getById(vo.getCurrentApproverId());
+        if (apply.getState() == 0) {
+            Task task = null;
+            if (StringUtils.hasText(apply.getProcessInstanceId())) {
+                task = taskService.createTaskQuery()
+                        .processInstanceId(apply.getProcessInstanceId())
+                        .singleResult();
+            }
+            Long approverId = resolveApproverIdFromTask(apply, task);
+            if (approverId == null && apply.getCurrentApproverId() != null) {
+                approverId = apply.getCurrentApproverId();
+            }
+            if (approverId == null && apply.getDepartmentId() == null) {
+                approverId = getAdminId();
+            }
+            if (approverId != null) {
+                vo.setCurrentApproverId(approverId);
+                User approver = userRepository.getById(approverId);
                 vo.setCurrentApproverName(approver != null ? approver.getName() : "未知");
                 vo.setCurrentApproverRole(approver != null ? approver.getRole() : null);
+            } else {
+                vo.setCurrentApproverName("待分配");
+            }
+            if (task != null) {
                 vo.setCurrentTaskName(task.getName());
             }
         }
@@ -270,5 +401,49 @@ public class LeaveWorkflowServiceImpl implements LeaveWorkflowService {
                 new LambdaQueryWrapper<User>().eq(User::getRole, 1).last("LIMIT 1")
         );
         return admin != null ? admin.getId() : 1L;
+    }
+
+    private Long resolveApproverIdFromTask(Apply apply, Task task) {
+        if (task == null) {
+            return null;
+        }
+        String assignee = task.getAssignee();
+        if (StringUtils.hasText(assignee)) {
+            return parseLong(assignee);
+        }
+        String taskDefinitionKey = task.getTaskDefinitionKey();
+        // 尝试从流程变量中解析
+        if (StringUtils.hasText(apply.getProcessInstanceId())) {
+            if ("deptManagerTask".equals(taskDefinitionKey)) {
+                Object deptManagerIdObj = runtimeService.getVariable(apply.getProcessInstanceId(), "deptManagerId");
+                Long deptManagerId = parseLong(deptManagerIdObj);
+                if (deptManagerId != null) {
+                    return deptManagerId;
+                }
+                if (apply.getDepartmentId() != null) {
+                    return getDeptManagerId(apply.getDepartmentId());
+                }
+                return getAdminId();
+            } else if ("adminTask".equals(taskDefinitionKey)) {
+                Object adminIdObj = runtimeService.getVariable(apply.getProcessInstanceId(), "adminId");
+                Long adminId = parseLong(adminIdObj);
+                return adminId != null ? adminId : getAdminId();
+            }
+        }
+        return null;
+    }
+
+    private Long parseLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        try {
+            return Long.valueOf(value.toString());
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 }

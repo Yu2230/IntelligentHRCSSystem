@@ -2,10 +2,10 @@ package com.yyds.hrcsserver.service;
 
 import com.yyds.hrcscommon.result.PageResult;
 import com.yyds.hrcscommon.result.Result;
-import com.yyds.hrcspojo.data.user.salary.MonthlyStatVO;
-import com.yyds.hrcspojo.data.user.salary.SalaryDetailDTO;
-import com.yyds.hrcspojo.data.user.salary.SalaryQueryDTO;
-import com.yyds.hrcspojo.data.user.salary.SalaryVO;
+import com.yyds.hrcspojo.salary.MonthlyStatVO;
+import com.yyds.hrcspojo.salary.SalaryDetailDTO;
+import com.yyds.hrcspojo.salary.SalaryQueryDTO;
+import com.yyds.hrcspojo.salary.SalaryVO;
 import com.yyds.hrcspojo.entity.Salary;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -34,4 +34,6 @@ public interface SalaryService extends IService<Salary> {
 
     // 月度统计
     List<MonthlyStatVO> getMonthlyStats(String year);
+
+    //SalaryVO getSalaryByUserIdAndMonth(Long , String );
 }

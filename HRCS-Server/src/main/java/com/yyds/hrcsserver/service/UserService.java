@@ -1,16 +1,18 @@
 package com.yyds.hrcsserver.service;
 
+import com.yyds.hrcscommon.result.PageResult;
 import com.yyds.hrcspojo.data.user.CountINFO;
 import com.yyds.hrcspojo.data.user.DailyStatsUserDTO;
-import com.yyds.hrcspojo.data.user.login.LoginByCodeDTO;
-import com.yyds.hrcspojo.data.user.login.LoginDTO;
-import com.yyds.hrcspojo.data.user.login.LoginVO;
+import com.yyds.hrcspojo.login.LoginByCodeDTO;
+import com.yyds.hrcspojo.login.LoginDTO;
+import com.yyds.hrcspojo.login.LoginVO;
 import com.yyds.hrcspojo.data.user.RegisterDTO;
 
-import com.yyds.hrcspojo.data.user.login.UserInfoVO;
-import com.yyds.hrcspojo.data.user.update.UpdateDTO;
+import com.yyds.hrcspojo.login.UserInfoVO;
+import com.yyds.hrcspojo.search.EmployeeSearchResultVO;
+import com.yyds.hrcspojo.search.UserListItemVO;
+import com.yyds.hrcspojo.update.UpdateDTO;
 import com.yyds.hrcspojo.entity.User;
-import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
 
@@ -57,6 +59,8 @@ public interface UserService {
 
     List<User> getAllUser(Integer pageNum, Integer pageSize,String name);
 
+    PageResult<UserListItemVO> getUserListView(Integer pageNum, Integer pageSize, String name);
+
     User getCurrentUserInfo(String id);
 
     void updateAvatar(String id, String avatar);
@@ -68,4 +72,9 @@ public interface UserService {
     CountINFO getCount();
 
     List<DailyStatsUserDTO> getDailyUserCountInfo();
+
+    /**
+     * 员工搜索（姓名/用户名/邮箱/手机号/工号）
+     */
+    EmployeeSearchResultVO searchEmployees(String keyword);
 }

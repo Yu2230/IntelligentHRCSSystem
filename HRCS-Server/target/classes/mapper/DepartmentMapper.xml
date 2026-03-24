@@ -5,7 +5,7 @@
 <mapper namespace="com.yyds.hrcsserver.mapper.DepartmentMapper">
 
 
-    <select id="selectPageWithManager" resultType="com.yyds.hrcspojo.data.user.department.DepartmentVO">
+    <select id="selectPageWithManager" resultType="com.yyds.hrcspojo.department.DepartmentVO">
         SELECT
         d.id,
         d.department_name,

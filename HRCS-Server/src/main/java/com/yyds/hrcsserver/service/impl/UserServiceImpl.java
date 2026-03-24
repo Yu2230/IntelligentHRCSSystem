@@ -3,26 +3,37 @@ package com.yyds.hrcsserver.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yyds.hrcscommon.client.MailClient;
 import com.yyds.hrcscommon.client.PasswordClient;
 import com.yyds.hrcscommon.constants.ErrorEnum;
+import com.yyds.hrcscommon.constants.PostConstants;
 import com.yyds.hrcscommon.constants.TimeOutEnum;
 import com.yyds.hrcscommon.exception.BusinessException;
+import com.yyds.hrcscommon.result.PageResult;
 import com.yyds.hrcscommon.utils.AliOssUtil;
 import com.yyds.hrcscommon.utils.JwtUtils;
 import com.yyds.hrcscommon.utils.ThrowUtils;
 import com.yyds.hrcspojo.data.user.CountINFO;
 import com.yyds.hrcspojo.data.user.DailyStatsUserDTO;
-import com.yyds.hrcspojo.data.user.login.LoginByCodeDTO;
-import com.yyds.hrcspojo.data.user.login.LoginDTO;
-import com.yyds.hrcspojo.data.user.login.LoginVO;
+import com.yyds.hrcspojo.login.LoginByCodeDTO;
+import com.yyds.hrcspojo.login.LoginDTO;
+import com.yyds.hrcspojo.login.LoginVO;
 import com.yyds.hrcspojo.data.user.RegisterDTO;
 
-import com.yyds.hrcspojo.data.user.login.UserInfoVO;
-import com.yyds.hrcspojo.data.user.update.UpdateDTO;
+import com.yyds.hrcspojo.login.UserInfoVO;
+import com.yyds.hrcspojo.search.EmployeeBasicVO;
+import com.yyds.hrcspojo.search.EmployeeSearchResultVO;
+import com.yyds.hrcspojo.search.UserListItemVO;
+import com.yyds.hrcspojo.update.UpdateDTO;
+import com.yyds.hrcspojo.entity.Apply;
 import com.yyds.hrcspojo.entity.Department;
+import com.yyds.hrcspojo.entity.JobPosition;
 import com.yyds.hrcspojo.entity.User;
+import com.yyds.hrcsserver.mapper.ApplyMapper;
+import com.yyds.hrcsserver.mapper.JobPositionMapper;
 import com.yyds.hrcsserver.mapper.UserMapper;
 import com.yyds.hrcsserver.repository.DepartmentRepository;
 import com.yyds.hrcsserver.repository.NoticeRepository;
@@ -61,13 +72,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private final AliOssUtil aliOssUtil;
     private final DepartmentRepository departmentRepository;
     private final NoticeRepository noticeRepository;
+    private final JobPositionMapper jobPositionMapper;
+    private final ApplyMapper applyMapper;
 
     public UserServiceImpl(StringRedisTemplate redisTemplate,
                            UserRepository userRepository,
                            MailClient mailClient,
                            PasswordClient passwordClient,
                            AliOssUtil aliOssUtil,
-                           DepartmentRepository departmentRepository, NoticeRepository noticeRepository){
+                           DepartmentRepository departmentRepository,
+                           NoticeRepository noticeRepository,
+                           JobPositionMapper jobPositionMapper,
+                           ApplyMapper applyMapper){
         this.redisTemplate = redisTemplate;
         this.userRepository = userRepository;
         this.mailClient = mailClient;
@@ -75,6 +91,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         this.passwordClient = passwordClient;
         this.departmentRepository = departmentRepository;
         this.noticeRepository = noticeRepository;
+        this.jobPositionMapper = jobPositionMapper;
+        this.applyMapper = applyMapper;
     }
 
     @Override
@@ -112,6 +130,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 4. 加密密码并保存
         String password = passwordClient.hashPassword(registerDTO.getPassword());
         User user = getUser(registerDTO, password);
+        user.setRole(PostConstants.user);
         userRepository.save(user);
     }
 
@@ -236,6 +255,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private void updateNonNullFields(UpdateDTO src, User dest) {
         if (src.getName() != null) dest.setName(src.getName());
         if (src.getUserName() != null) dest.setUserName(src.getUserName());
+        if (src.getWorkNo() != null) dest.setWorkNo(src.getWorkNo());
         if (src.getPhone() != null) dest.setPhone(src.getPhone());
         if (src.getIdCard() != null) dest.setIdCard(src.getIdCard());
         if (src.getBankCard() != null) dest.setBankCard(src.getBankCard());
@@ -267,6 +287,79 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public List<User> getAllUser(Integer pageNum, Integer pageSize,String name) {
         //获取所有用户分页，根据name模糊查询并且按照createTime降序排序
         return userRepository.selectAllUser(pageNum, pageSize, name);
+    }
+
+    @Override
+    public PageResult<UserListItemVO> getUserListView(Integer pageNum, Integer pageSize, String name) {
+        int currentPage = (pageNum == null || pageNum <= 0) ? 1 : pageNum;
+        int currentSize = (pageSize == null || pageSize <= 0) ? 10 : pageSize;
+
+        Page<User> page = userRepository.lambdaQuery()
+                .like(StringUtils.hasText(name), User::getName, name)
+                .orderByDesc(User::getCreateTime)
+                .page(new Page<>(currentPage, currentSize));
+
+        List<User> records = page.getRecords();
+        if (records == null || records.isEmpty()) {
+            return PageResult.build(Collections.emptyList(), page.getTotal(), currentPage, currentSize);
+        }
+
+        List<Long> departmentIds = records.stream()
+                .map(User::getDepartmentId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        List<Long> positionIds = records.stream()
+                .map(User::getJobPositionId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        List<Long> userIds = records.stream()
+                .map(User::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        Map<Long, String> deptNameMap = departmentIds.isEmpty()
+                ? Collections.emptyMap()
+                : departmentRepository.listByIds(departmentIds).stream()
+                .collect(Collectors.toMap(Department::getId, Department::getDepartmentName, (a, b) -> a));
+
+        Map<Long, String> positionNameMap = positionIds.isEmpty()
+                ? Collections.emptyMap()
+                : jobPositionMapper.selectBatchIds(positionIds).stream()
+                .collect(Collectors.toMap(JobPosition::getId, JobPosition::getTitle, (a, b) -> a));
+
+        Date now = new Date();
+        Set<Long> leaveUserSet = userIds.isEmpty()
+                ? Collections.emptySet()
+                : applyMapper.selectList(
+                        new LambdaQueryWrapper<Apply>()
+                                .in(Apply::getApplicantId, userIds)
+                                .eq(Apply::getState, 1)
+                                .le(Apply::getStartTime, now)
+                                .ge(Apply::getEndTime, now)
+                ).stream().map(Apply::getApplicantId).collect(Collectors.toSet());
+
+        List<UserListItemVO> list = records.stream().map(user -> {
+            UserListItemVO vo = new UserListItemVO();
+            vo.setId(user.getId());
+            vo.setUserName(user.getUserName());
+            vo.setName(user.getName());
+            vo.setSex(user.getSex());
+            vo.setAvatar(user.getAvatar());
+            vo.setRole(user.getRole());
+            vo.setStatus(user.getStatus());
+            vo.setDepartmentId(user.getDepartmentId());
+            vo.setDepartmentName(user.getDepartmentId() == null ? null : deptNameMap.get(user.getDepartmentId()));
+            vo.setJobPositionId(user.getJobPositionId());
+            vo.setJobPositionName(
+                    user.getJobPositionId() == null ? null : positionNameMap.get(user.getJobPositionId())
+            );
+            vo.setEmploymentStatus(leaveUserSet.contains(user.getId()) ? "ON_LEAVE" : "ON_DUTY");
+            return vo;
+        }).collect(Collectors.toList());
+
+        return PageResult.build(list, page.getTotal(), currentPage, currentSize);
     }
 
     @Override
@@ -367,6 +460,50 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             result.add(dto);
         }
 
+        return result;
+    }
+
+    /**
+     * 员工搜索（姓名/用户名/邮箱/手机号/工号）
+     */
+    @Override
+    public EmployeeSearchResultVO searchEmployees(String keyword) {
+        List<User> users = userRepository.searchEmployees(keyword, 20);
+        EmployeeSearchResultVO result = new EmployeeSearchResultVO();
+        result.setExists(!users.isEmpty());
+
+        if (users.isEmpty()) {
+            result.setUsers(Collections.emptyList());
+            return result;
+        }
+
+        // 批量查询部门名称，避免N+1
+        List<Long> deptIds = users.stream()
+                .map(User::getDepartmentId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> deptNameMap = departmentRepository.listByIds(deptIds)
+                .stream()
+                .collect(Collectors.toMap(Department::getId, Department::getDepartmentName, (a, b) -> a));
+
+        List<EmployeeBasicVO> voList = users.stream().map(user -> {
+            EmployeeBasicVO vo = new EmployeeBasicVO();
+            vo.setId(user.getId());
+            vo.setName(user.getName());
+            vo.setUserName(user.getUserName());
+            vo.setEmail(user.getEmail());
+            vo.setPhone(user.getPhone());
+            vo.setWorkNo(user.getWorkNo());
+            vo.setRole(user.getRole());
+            vo.setDepartmentId(user.getDepartmentId());
+            vo.setDepartmentName(
+                    user.getDepartmentId() != null ? deptNameMap.get(user.getDepartmentId()) : null
+            );
+            return vo;
+        }).collect(Collectors.toList());
+
+        result.setUsers(voList);
         return result;
     }
 

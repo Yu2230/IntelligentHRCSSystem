@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.1.2</version>
+        <version>3.5.3</version>
 
     </parent>
     <groupId>com.yyds</groupId>
@@ -19,14 +19,14 @@
     </modules>
     <!-- 全局版本-->
     <properties>
-        <java.version>17</java.version>
-        <spring-boot.version>3.5.0</spring-boot.version>
+
+        <spring-boot.version>3.5.3</spring-boot.version>
         <lombok.version>1.18.38</lombok.version>
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
         <jsqlparser.version>4.6</jsqlparser.version>
         <mysql.version>8.0.31</mysql.version>
         <jjwt.version>0.12.5</jjwt.version>
-        <redis.version>3.5.0</redis.version>
+        <redis.version>3.5.3</redis.version>
         <pagehelper.version>5.1.2</pagehelper.version>
         <knife4j.version>4.3.0</knife4j.version>
         <common-lang3.version>3.17.0</common-lang3.version>
@@ -35,7 +35,12 @@
         <mail.version>2.0.10</mail.version>
         <argon2-jvm.version>2.11</argon2-jvm.version>
         <aliyun.sdk.oss>3.10.2</aliyun.sdk.oss>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <java.version>21</java.version>
     </properties>
+
+
 
     <dependencyManagement>
         <dependencies>
@@ -72,10 +77,11 @@
             <version>${spring-boot.version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>${mybatis-plus.version}</version>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>3.5.7</version>
         </dependency>
 
         <dependency>
@@ -241,11 +247,19 @@
             <version>2.4.0</version>
         </dependency>
 
+
+
+
+
+
+
+        <!-- https://mvnrepository.com/artifact/dev.langchain4j/langchain4j-community-dashscope-spring-boot-starter -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-community-dashscope-spring-boot-starter</artifactId>
             <version>1.1.0-beta7</version>
         </dependency>
+
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j</artifactId>
@@ -260,22 +274,33 @@
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-mcp</artifactId>
-            <version>1.0.0-beta3</version>
+            <version>1.1.0-beta7</version>
         </dependency>
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-reactor</artifactId>
             <version>1.1.0-beta7</version>
         </dependency>
-
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.16.1</version>
+            <version>1.20.1</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>2.2</version>  <!-- 使用与 Spring Boot 兼容的版本 -->
+        </dependency>
 
     </dependencies>
+    <repositories>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
+    </repositories>
+
 </project>
 
 

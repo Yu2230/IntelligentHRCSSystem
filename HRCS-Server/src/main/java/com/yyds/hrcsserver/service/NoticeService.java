@@ -2,10 +2,9 @@ package com.yyds.hrcsserver.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 
-import com.yyds.hrcspojo.data.user.notice.DaliyStateCountNoticeDTO;
+import com.yyds.hrcspojo.notice.DaliyStateCountNoticeDTO;
 import com.yyds.hrcspojo.entity.Notice;
 import com.baomidou.mybatisplus.extension.service.IService;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;

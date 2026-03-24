@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.yyds.hrcsserver.mapper.SalaryMapper">
 
-    <select id="selectMonthlyStats" resultType="com.yyds.hrcspojo.data.user.salary.MonthlyStatVO">
+    <select id="selectMonthlyStats" resultType="com.yyds.hrcspojo.salary.MonthlyStatVO">
         SELECT
             month,
             COUNT(*) AS totalCount,

@@ -7,13 +7,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
+import com.yyds.hrcscommon.client.MailClient;
 import com.yyds.hrcscommon.result.PageResult;
 
 import com.yyds.hrcscommon.result.Result;
-import com.yyds.hrcspojo.data.user.salary.MonthlyStatVO;
-import com.yyds.hrcspojo.data.user.salary.SalaryDetailDTO;
-import com.yyds.hrcspojo.data.user.salary.SalaryQueryDTO;
-import com.yyds.hrcspojo.data.user.salary.SalaryVO;
+import com.yyds.hrcspojo.salary.MonthlyStatVO;
+import com.yyds.hrcspojo.salary.SalaryDetailDTO;
+import com.yyds.hrcspojo.salary.SalaryQueryDTO;
+import com.yyds.hrcspojo.salary.SalaryVO;
 import com.yyds.hrcspojo.entity.*;
 
 
@@ -26,10 +27,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,11 +44,18 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class SalaryServiceImpl extends ServiceImpl<SalaryMapper, Salary> implements SalaryService {
+    private static final BigDecimal DEFAULT_BASE_SALARY = new BigDecimal("5000.00");
+    private static final BigDecimal LATE_PENALTY = new BigDecimal("50");
+    private static final BigDecimal ABSENT_PENALTY = new BigDecimal("200");
+    private static final BigDecimal WORK_DAYS = new BigDecimal("22");
     private final SalaryMapper salaryMapper;
     private final SalaryDetailMapper salaryDetailMapper;
     private final UserSalaryProfileMapper userSalaryProfileMapper;
     private final UserMapper userMapper;
     private final DepartmentMapper departmentMapper;
+    private final AttendanceRecordMapper attendanceRecordMapper;
+    private final ApplyMapper applyMapper;
+    private final MailClient mailClient;
 
     @Override
     public PageResult<SalaryVO> getSalaryPage(SalaryQueryDTO dto) {
@@ -146,14 +160,7 @@ public class SalaryServiceImpl extends ServiceImpl<SalaryMapper, Salary> impleme
         UserSalaryProfile profile = userSalaryProfileMapper.selectOne(
                 new LambdaQueryWrapper<UserSalaryProfile>().eq(UserSalaryProfile::getUserId, emp.getId())
         );
-        BigDecimal baseSalary = profile != null ? profile.getBaseSalary() : new BigDecimal("5000.00");
-
-        // 计算调整项
-        List<SalaryDetail> details = salaryDetailMapper.selectList(
-                new LambdaQueryWrapper<SalaryDetail>().eq(SalaryDetail::getSalaryId, existing != null ? existing.getId() : null)
-        );
-        BigDecimal totalCommission = BigDecimal.ZERO;
-        // 实际应从commission_rule表获取，此处简化
+        BigDecimal baseSalary = profile != null && profile.getBaseSalary() != null ? profile.getBaseSalary() : DEFAULT_BASE_SALARY;
 
         Salary salary = new Salary();
         salary.setUserId(emp.getId());
@@ -161,15 +168,33 @@ public class SalaryServiceImpl extends ServiceImpl<SalaryMapper, Salary> impleme
         salary.setDeptId(emp.getDepartmentId());
         salary.setMonth(month);
         salary.setBaseSalary(baseSalary);
-        salary.setTotalCommission(totalCommission);
-        salary.setActualSalary(baseSalary.add(totalCommission));
+        salary.setTotalCommission(BigDecimal.ZERO);
+        salary.setActualSalary(baseSalary);
         salary.setStatus(1);
         salary.setIssuerId(issuerId);
         salary.setIssueTime(new Date());
         salary.setCreateBy(issuerId);
         salary.setUpdateBy(issuerId);
         salaryMapper.insert(salary);
+        // 计算请假与考勤扣款
+        List<SalaryDetail> details = new ArrayList<>();
+        details.addAll(buildLeaveDeductionDetails(emp, salary.getId(), baseSalary, month, issuerId));
+        details.addAll(buildAttendanceDeductionDetails(emp, salary.getId(), month, issuerId));
 
+        if (!details.isEmpty()) {
+            for (SalaryDetail detail : details) {
+                salaryDetailMapper.insert(detail);
+            }
+        }
+
+        BigDecimal totalCommission = calcTotalCommission(details);
+        salary.setTotalCommission(totalCommission);
+        salary.setActualSalary(baseSalary.add(totalCommission));
+        salary.setUpdateBy(issuerId);
+        salary.setUpdateTime(new Date());
+        salaryMapper.updateById(salary);
+
+        sendSalaryNotice(emp, salary, details);
         log.info("员工{}工资发放成功，实发：{}", emp.getId(), salary.getActualSalary());
     }
 
@@ -203,10 +228,152 @@ public class SalaryServiceImpl extends ServiceImpl<SalaryMapper, Salary> impleme
         salaryMapper.updateById(salary);
     }
 
+    /**
+     * 生成请假扣款明细（仅统计当月已审批通过的请假）
+     */
+    private List<SalaryDetail> buildLeaveDeductionDetails(User user, Long salaryId, BigDecimal baseSalary, String month, Long issuerId) {
+        List<SalaryDetail> details = new ArrayList<>();
+        YearMonth yearMonth = YearMonth.parse(month);
+        Date startDate = Date.from(yearMonth.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+        Date endDate = Date.from(yearMonth.atEndOfMonth().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+        List<Apply> applies = applyMapper.selectList(
+                new LambdaQueryWrapper<Apply>()
+                        .eq(Apply::getApplicantId, user.getId())
+                        .eq(Apply::getState, 1)
+                        .le(Apply::getStartTime, endDate)
+                        .ge(Apply::getEndTime, startDate)
+        );
+        if (applies == null || applies.isEmpty()) {
+            return details;
+        }
+
+        int totalDays = applies.stream()
+                .mapToInt(apply -> {
+                    if (apply.getDays() != null) {
+                        return apply.getDays();
+                    }
+                    if (apply.getStartTime() != null && apply.getEndTime() != null) {
+                        LocalDate start = apply.getStartTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                        LocalDate end = apply.getEndTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                        long days = ChronoUnit.DAYS.between(start, end) + 1;
+                        return (int) Math.max(days, 0);
+                    }
+                    return 0;
+                })
+                .sum();
+        if (totalDays <= 0) {
+            return details;
+        }
+
+        BigDecimal dailySalary = baseSalary.divide(WORK_DAYS, 2, RoundingMode.HALF_UP);
+        BigDecimal amount = dailySalary.multiply(new BigDecimal(totalDays)).setScale(2, RoundingMode.HALF_UP);
+
+        SalaryDetail detail = new SalaryDetail();
+        detail.setSalaryId(salaryId);
+        detail.setCommissionType(1);
+        detail.setCommissionName("请假扣款");
+        detail.setCommissionAmount(amount);
+        detail.setDescription("请假" + totalDays + "天，日薪" + dailySalary);
+        detail.setCreateBy(issuerId);
+        detail.setCreateTime(new Date());
+        details.add(detail);
+        return details;
+    }
+
+    /**
+     * 生成考勤扣款明细（迟到>30分钟、缺勤）
+     */
+    private List<SalaryDetail> buildAttendanceDeductionDetails(User user, Long salaryId, String month, Long issuerId) {
+        List<SalaryDetail> details = new ArrayList<>();
+        YearMonth yearMonth = YearMonth.parse(month);
+        Date startDate = Date.from(yearMonth.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+        Date endDate = Date.from(yearMonth.atEndOfMonth().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+        List<AttendanceRecord> records = attendanceRecordMapper.selectList(
+                new LambdaQueryWrapper<AttendanceRecord>()
+                        .eq(AttendanceRecord::getUserId, user.getId())
+                        .ge(AttendanceRecord::getWorkDate, startDate)
+                        .lt(AttendanceRecord::getWorkDate, endDate)
+        );
+        if (records == null || records.isEmpty()) {
+            return details;
+        }
+        long lateCount = records.stream().filter(r -> r.getIsLate() != null && r.getIsLate() == 1).count();
+        long absentCount = records.stream().filter(r -> r.getIsAbsent() != null && r.getIsAbsent() == 1).count();
+
+        if (lateCount > 0) {
+            SalaryDetail late = new SalaryDetail();
+            late.setSalaryId(salaryId);
+            late.setCommissionType(1);
+            late.setCommissionName("迟到扣款");
+            late.setCommissionAmount(LATE_PENALTY.multiply(new BigDecimal(lateCount)));
+            late.setDescription("迟到次数：" + lateCount + "次（超过30分钟）");
+            late.setCreateBy(issuerId);
+            late.setCreateTime(new Date());
+            details.add(late);
+        }
+        if (absentCount > 0) {
+            SalaryDetail absent = new SalaryDetail();
+            absent.setSalaryId(salaryId);
+            absent.setCommissionType(1);
+            absent.setCommissionName("缺勤扣款");
+            absent.setCommissionAmount(ABSENT_PENALTY.multiply(new BigDecimal(absentCount)));
+            absent.setDescription("缺勤次数：" + absentCount + "次");
+            absent.setCreateBy(issuerId);
+            absent.setCreateTime(new Date());
+            details.add(absent);
+        }
+        return details;
+    }
+
+    private BigDecimal calcTotalCommission(List<SalaryDetail> details) {
+        if (details == null || details.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return details.stream()
+                .map(d -> d.getCommissionType() == 0 ? d.getCommissionAmount() : d.getCommissionAmount().negate())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * 工资发放邮件通知
+     */
+    private void sendSalaryNotice(User user, Salary salary, List<SalaryDetail> details) {
+        if (user == null || user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            return;
+        }
+        try {
+            StringBuilder builder = new StringBuilder();
+            builder.append("您好，").append(user.getName() == null ? user.getUserName() : user.getName()).append("，\n");
+            builder.append("您的 ").append(salary.getMonth()).append(" 工资已发放。\n");
+            builder.append("基础工资：").append(salary.getBaseSalary()).append("\n");
+            if (details != null && !details.isEmpty()) {
+                builder.append("调整明细：\n");
+                for (SalaryDetail detail : details) {
+                    builder.append("- ").append(detail.getCommissionName())
+                            .append(": ").append(detail.getCommissionAmount());
+                    if (detail.getDescription() != null) {
+                        builder.append("（").append(detail.getDescription()).append("）");
+                    }
+                    builder.append("\n");
+                }
+            }
+            builder.append("实发工资：").append(salary.getActualSalary()).append("\n");
+            builder.append("如有疑问，请联系管理员。\n");
+
+            mailClient.sendCustomMail(user.getEmail(), "工资发放通知", builder.toString());
+        } catch (Exception e) {
+            log.warn("工资通知邮件发送失败 userId={}, msg={}", user.getId(), e.getMessage());
+        }
+    }
+
     @Override
     public List<MonthlyStatVO> getMonthlyStats(String year) {
         return salaryMapper.selectMonthlyStats(year);
     }
+
+
 
     private SalaryVO convertToVO(Salary salary) {
         SalaryVO vo = new SalaryVO();

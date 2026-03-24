@@ -11,8 +11,8 @@ public class MyBatisPlusConfig {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        // 使用无参数构造函数，让 MyBatis Plus 自动检测数据库类型
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
+        // 分页插件
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
         return interceptor;
     }
 }

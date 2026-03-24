@@ -4,10 +4,11 @@ package com.yyds.hrcsserver.controller;// controller/SalaryController.java
 import com.yyds.hrcscommon.result.PageResult;
 import com.yyds.hrcscommon.result.Result;
 
-import com.yyds.hrcspojo.data.user.salary.MonthlyStatVO;
-import com.yyds.hrcspojo.data.user.salary.SalaryDetailDTO;
-import com.yyds.hrcspojo.data.user.salary.SalaryQueryDTO;
-import com.yyds.hrcspojo.data.user.salary.SalaryVO;
+
+import com.yyds.hrcspojo.salary.MonthlyStatVO;
+import com.yyds.hrcspojo.salary.SalaryDetailDTO;
+import com.yyds.hrcspojo.salary.SalaryQueryDTO;
+import com.yyds.hrcspojo.salary.SalaryVO;
 import com.yyds.hrcsserver.service.SalaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;

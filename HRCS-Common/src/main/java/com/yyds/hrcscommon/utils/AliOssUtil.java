@@ -34,7 +34,7 @@ public class AliOssUtil {
     private String cdnDomain; // CDN域名（可选）
 
     /**
-     * 上传文件（完整版）
+     * 上传文件
      * @param file MultipartFile文件
      * @param dir 存储目录（如：notice/）
      * @return 上传结果对象

@@ -1,17 +1,10 @@
 package com.yyds.hrcsserver.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 
-import com.yyds.hrcspojo.data.user.login.UserInfoVO;
 import com.yyds.hrcspojo.entity.User;
 import jakarta.validation.constraints.NotBlank;
-import org.apache.ibatis.annotations.Options;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.cursor.Cursor;
-import org.apache.ibatis.mapping.ResultSetType;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -60,6 +53,8 @@ public interface UserRepository extends IService<User> {
 
     void removeUserDepartment(Long userId);
 
+    Map<Long, Long> countByJobPositionIds(List<Long> jobPositionIds);
+
 
     List<User> selectList(LambdaQueryWrapper<User> eq);
 
@@ -70,4 +65,9 @@ public interface UserRepository extends IService<User> {
     List<Map<String, Object>> getDailyUserCount(LocalDate startDate, LocalDate today);
 
     Long getAdminId();
+
+    /**
+     * 员工搜索（姓名/用户名/邮箱/手机号/工号）
+     */
+    List<User> searchEmployees(String keyword, Integer limit);
 }

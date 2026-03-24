@@ -2,14 +2,16 @@ package com.yyds.hrcsserver.controller;
 
 import com.yyds.hrcscommon.constants.ErrorEnum;
 import com.yyds.hrcscommon.exception.BusinessException;
+import com.yyds.hrcscommon.result.PageResult;
 import com.yyds.hrcscommon.result.Result;
 import com.yyds.hrcscommon.utils.AliOssUtil;
 import com.yyds.hrcscommon.utils.UserContext;
-import com.yyds.hrcspojo.data.user.login.LoginByCodeDTO;
-import com.yyds.hrcspojo.data.user.login.LoginDTO;
+import com.yyds.hrcspojo.login.LoginByCodeDTO;
+import com.yyds.hrcspojo.login.LoginDTO;
 import com.yyds.hrcspojo.data.user.RegisterDTO;
-import com.yyds.hrcspojo.data.user.login.UserInfoVO;
-import com.yyds.hrcspojo.data.user.update.UpdateDTO;
+import com.yyds.hrcspojo.login.UserInfoVO;
+import com.yyds.hrcspojo.search.UserListItemVO;
+import com.yyds.hrcspojo.update.UpdateDTO;
 import com.yyds.hrcspojo.entity.User;
 import com.yyds.hrcsserver.service.UserService;
 
@@ -90,6 +92,17 @@ public class UserController {
     }
 
     /**
+     * 用户列表聚合视图（部门/岗位/在职状态）
+     */
+    @Operation(summary = "用户列表聚合视图")
+    @GetMapping("/listView")
+    public Result<PageResult<UserListItemVO>> getListView(@RequestParam Integer pageNum,
+                                                           @RequestParam Integer pageSize,
+                                                           @RequestParam(required = false) String name) {
+        return Result.getSuccessResult(userService.getUserListView(pageNum, pageSize, name));
+    }
+
+    /**
      * 获取所有用户
      */
     @Operation(summary = "获取所有用户")
@@ -131,7 +144,7 @@ public class UserController {
      * 更新头像
      */
     @Operation(summary = "更新头像")
-    @PostMapping("/updateAvatar")
+    @PostMapping("/uploadAvatar")
     public Result<String> uploadAvatar(@RequestParam("file") MultipartFile file,
                                        @RequestParam("userId") Long userId) {
         // 1. 校验文件

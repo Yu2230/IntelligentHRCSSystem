@@ -3,9 +3,9 @@ package com.yyds.hrcsserver.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yyds.hrcscommon.result.Result;
-import com.yyds.hrcspojo.data.user.department.DepartmentVO;
-import com.yyds.hrcspojo.data.user.department.DepartmentWithUsersDTOS;
-import com.yyds.hrcspojo.data.user.department.DepartmentWithUsersVO;
+import com.yyds.hrcspojo.department.DepartmentVO;
+import com.yyds.hrcspojo.department.DepartmentWithUsersDTOS;
+import com.yyds.hrcspojo.department.DepartmentWithUsersVO;
 import com.yyds.hrcspojo.entity.Department;
 import com.yyds.hrcsserver.service.DepartmentService;
 import io.swagger.annotations.ApiOperation;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Slf4j
-@Tag(name = "部门模块", description = "部门相关接口")  // ✅ 替换 @Api
+@Tag(name = "部门模块", description = "部门相关接口")
 @RestController
 @RequestMapping("/department")
 public class DepartmentController {
@@ -76,6 +76,15 @@ public class DepartmentController {
             @RequestParam(required = false) String name) {
         IPage<DepartmentVO> pageData = departmentService.pageQuery(pageNum, pageSize, name);
         return Result.getSuccessResult(pageData);
+    }
+
+    /**
+     * 查询所有部门（精简）
+     */
+    @GetMapping("/queryAll")
+    @ApiOperation(value = "查询所有部门", notes = "查询所有部门（精简）")
+    public Result<List<DepartmentVO>> queryAll() {
+        return Result.getSuccessResult(departmentService.queryAll());
     }
 
     /**

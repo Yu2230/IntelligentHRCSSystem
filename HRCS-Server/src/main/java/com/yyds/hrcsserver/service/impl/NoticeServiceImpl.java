@@ -10,7 +10,7 @@ import com.yyds.hrcscommon.result.UploadResult;
 import com.yyds.hrcscommon.utils.AliOssUtil;
 import com.yyds.hrcscommon.utils.UserContext;
 
-import com.yyds.hrcspojo.data.user.notice.DaliyStateCountNoticeDTO;
+import com.yyds.hrcspojo.notice.DaliyStateCountNoticeDTO;
 import com.yyds.hrcspojo.entity.Notice;
 
 import com.yyds.hrcspojo.entity.NoticeReceiver;

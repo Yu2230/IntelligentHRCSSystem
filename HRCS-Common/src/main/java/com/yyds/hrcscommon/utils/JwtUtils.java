@@ -46,4 +46,8 @@ public class JwtUtils {
         return claims.getSubject();
     }
 
+    public static long getUserId(String token)throws JwtException {
+        Claims claims = parse(token);
+        return Long.valueOf(claims.getSubject());
+    }
 }
