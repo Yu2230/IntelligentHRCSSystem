@@ -29,9 +29,9 @@ salary:
 aliyun:
   oss:
     max-file-size: 10485760  # 例如：10MB = 10 * 1024 * 1024 bytes
-    bucket-name: lh20-java
-    access-key-id: LTAI5tMLyAxCDc4kcnZPVpzT
-    access-key-secret: j1ikdgi5jsPqXmefqldVvB1BygIqjT
+    bucket-name: 
+    access-key-id: 
+    access-key-secret: 
     endpoint: oss-cn-beijing.aliyuncs.com
 
 web:
@@ -49,16 +49,16 @@ spring:
   application:
     name: Hrcs-Starter
   mail:
-    username: yu_hl0v1@163.com
-    password: SSmPTZFXtYRMTMMe
+    username: 
+    password:
     host: smtp.163.com
   web:
     resources:
       add-mappings: false  # 禁用静态资源映射
   datasource:
-    url: jdbc:mysql://localhost:3306/customer_service?useSSL=false&serverTimezone=Asia/Shanghai
-    username: root
-    password: 1234
+    url: 
+    username:
+    password: 
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
@@ -105,41 +105,25 @@ server:
   port: 8024
 
 
-#langchain4j配置
-#langchain4j:
-#  community:
-#    dashscope:
-#      chat-model:
-#        model-name: qwen3-max
-#        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
-#        base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-#      streaming-chat-model:
-#        model-name: qwen3-max
-#        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
-#        base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-#      embedding-model:
-#        model-name: text-em bedding-v4
-#        api-key: sk-69b046dd98b4458681f28ef4ebd99f79
-#        base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
 
 langchain4j:
   community:
     dashscope:
-      api-key: "sk-69b046dd98b4458681f28ef4ebd99f79"
+      api-key: 
       chat-model:
         model-name: qwen3-max
-        api-key: "sk-69b046dd98b4458681f28ef4ebd99f79"
+        api-key: 
       streaming-chat-model:
         model-name: qwen3-max
-        api-key: "sk-69b046dd98b4458681f28ef4ebd99f79"
+        api-key:
       embedding-model:
         model-name: text-embedding-v2
-        api-key: "sk-69b046dd98b4458681f28ef4ebd99f79"
+        api-key: 
   rag:
     enabled: true  # ✅ 强制启用
     max-results: 5 # ✅ 检索结果数量
     min-score: 0.6 # ✅ 最低相似度
 
 bigmodel:
-  api-key: 6287908b8d4640979f8b504ae8991f4e.JdRO38eQ89g89UUD
+  api-key: 
 
